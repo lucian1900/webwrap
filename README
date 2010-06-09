@@ -1,0 +1,4 @@
+WebWrap
+
+Abstraction over hulahop or pywebkitgtk to provide a WebView class to pygtk apps.
+The application should not need to care about which engine it's using.
