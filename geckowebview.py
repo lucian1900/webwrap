@@ -1,7 +1,7 @@
 import os
 import logging
 
-from sugar import env
+import gobject
 
 import xpcom
 from xpcom.nsError import *
@@ -11,7 +11,7 @@ from xpcom.components import interfaces
 import hulahop
 from hulahop.webview import WebView as GeckoWebView
 
-hulahop.startup(os.path.join(env.get_profile_path(), 'gecko'))
+from sugar import env
 
 class WebView(GeckoWebView):
     __gtype_name__ = 'WebView'
@@ -24,6 +24,8 @@ class WebView(GeckoWebView):
     _com_interfaces_ = interfaces.nsIWindowCreator
     
     def __init__(self):
+        hulahop.startup(os.path.join(env.get_profile_path(), 'gecko'))
+
         GeckoWebView.__init__(self)
         
         io_service_class = components.classes[ \
@@ -71,3 +73,27 @@ class WebView(GeckoWebView):
             markupDocumentViewer = contentViewer.queryInterface( \
                     interfaces.nsIMarkupDocumentViewer)
             markupDocumentViewer.fullZoom -= _ZOOM_AMOUNT
+            
+    def set_user_stylesheet(self, uri):
+        io_service2 = io_service_class.getService(interfaces.nsIIOService2)
+        io_service2.manageOfflineStatus = False
+
+        cls = components.classes['@mozilla.org/content/style-sheet-service;1']
+        style_sheet_service = cls.getService(interfaces.nsIStyleSheetService)
+
+        if os.path.exists(uri):
+            user_sheet_uri = io_service.newURI('file:///' + uri, None, None)
+            style_sheet_service.loadAndRegisterSheet(user_sheet_uri,
+                    interfaces.nsIStyleSheetService.USER_SHEET)
+    
+    def set_agent_stylesheet(self, uri):
+        io_service2 = io_service_class.getService(interfaces.nsIIOService2)
+        io_service2.manageOfflineStatus = False
+
+        cls = components.classes['@mozilla.org/content/style-sheet-service;1']
+        style_sheet_service = cls.getService(interfaces.nsIStyleSheetService)
+
+        if os.path.exists(uri):
+            agent_sheet_uri = io_service.newURI('file:///' + uri, None, None)
+            style_sheet_service.loadAndRegisterSheet(agent_sheet_uri,
+                    interfaces.nsIStyleSheetService.AGENT_SHEET)
