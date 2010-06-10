@@ -77,7 +77,7 @@ class WebView(GeckoWebView):
             markupDocumentViewer = contentViewer.queryInterface( \
                     interfaces.nsIMarkupDocumentViewer)
             markupDocumentViewer.fullZoom -= _ZOOM_AMOUNT
-            
+        
     def set_user_stylesheet(self, uri):
         io_service2 = io_service_class.getService(interfaces.nsIIOService2)
         io_service2.manageOfflineStatus = False
@@ -101,3 +101,67 @@ class WebView(GeckoWebView):
             agent_sheet_uri = io_service.newURI('file:///' + uri, None, None)
             style_sheet_service.loadAndRegisterSheet(agent_sheet_uri,
                     interfaces.nsIStyleSheetService.AGENT_SHEET)
+            
+    def get_source(self, async_cb, async_err_cb):
+        cls = components.classes[ \
+                '@mozilla.org/embedding/browser/nsWebBrowserPersist;1']
+        persist = cls.createInstance(interfaces.nsIWebBrowserPersist)
+        # get the source from the cache
+        persist.persistFlags = \
+                interfaces.nsIWebBrowserPersist.PERSIST_FLAGS_FROM_CACHE
+        
+        temp_path = os.path.join(activity.get_activity_root(), 'instance')
+        file_path = os.path.join(temp_path, '%i' % time.time())        
+        cls = components.classes["@mozilla.org/file/local;1"]
+        local_file = cls.createInstance(interfaces.nsILocalFile)
+        local_file.initWithPath(file_path)
+
+        progresslistener = GetSourceListener(file_path, async_cb, async_err_cb)
+        persist.progressListener = xpcom.server.WrapObject(
+            progresslistener, interfaces.nsIWebProgressListener)
+
+        uri = self.web_navigation.currentURI            
+        persist.saveURI(uri, self.doc_shell, None, None, None, local_file)
+            
+class CommandListener(object):
+    _com_interfaces_ = interfaces.nsIDOMEventListener
+    def __init__(self, window):
+        self._window = window
+
+    def handleEvent(self, event):
+        if not event.isTrusted:
+            return
+
+        uri = event.originalTarget.ownerDocument.documentURI
+        if not uri.startswith('about:neterror?e=nssBadCert'):
+            return
+
+        cls = components.classes['@sugarlabs.org/add-cert-exception;1']
+        cert_exception = cls.createInstance(interfaces.hulahopAddCertException)
+        cert_exception.showDialog(self._window)
+        
+class GetSourceListener(object):
+    _com_interfaces_ = interfaces.nsIWebProgressListener
+    
+    def __init__(self, file_path, async_cb, async_err_cb):
+        self._file_path = file_path
+        self._async_cb = async_cb
+        self._async_err_cb = async_err_cb
+
+    def onStateChange(self, webProgress, request, stateFlags, status):
+        if stateFlags & interfaces.nsIWebProgressListener.STATE_IS_REQUEST and \
+                stateFlags & interfaces.nsIWebProgressListener.STATE_STOP:
+            self._async_cb(self._file_path)
+
+    def onProgressChange(self, progress, request, curSelfProgress,
+                         maxSelfProgress, curTotalProgress, maxTotalProgress):
+        pass
+
+    def onLocationChange(self, progress, request, location):
+        pass
+
+    def onStatusChange(self, progress, request, status, message):
+        pass
+
+    def onSecurityChange(self, progress, request, state):
+        pass

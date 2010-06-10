@@ -4,14 +4,21 @@ import logging
 
 try:
     from geckobackend import *
-except ImportError:
+    from geckobackend import webview
+except ImportError, e:
+    logging.debug(e)
     logging.warning('hulahop could not be loaded, trying pywebkitgtk.')
     
     try:
         from webkitbackend import *
+        from webkitbackend import webview
     except ImportError:
         logging.error('pywebkitgtk could not be loaded. No suitable web engine \
                       found')
+    else:
+        logging.info("Using pywebkitgtk")
+else:
+    logging.info("Using hulahop")
 
 if __name__ == '__main__':
     import gtk
