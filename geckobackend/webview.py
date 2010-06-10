@@ -1,4 +1,3 @@
-import os
 import logging
 
 import gobject
@@ -24,8 +23,6 @@ class WebView(GeckoWebView):
     _com_interfaces_ = interfaces.nsIWindowCreator
     
     def __init__(self):
-        hulahop.startup(os.path.join(env.get_profile_path(), 'gecko'))
-
         GeckoWebView.__init__(self)
         
         io_service_class = components.classes[ \
@@ -37,8 +34,15 @@ class WebView(GeckoWebView):
         io_service2 = io_service_class.getService(interfaces.nsIIOService2)
         io_service2.manageOfflineStatus = False
         
+        # enable typeahead
         cls = components.classes["@mozilla.org/typeaheadfind;1"]
         self.typeahead = cls.createInstance(interfaces.nsITypeAheadFind)
+        
+        # don't pick up the sugar theme - use the native mozilla one instead
+        cls = components.classes['@mozilla.org/preferences-service;1']
+        pref_service = cls.getService(components.interfaces.nsIPrefService)
+        branch = pref_service.getBranch("mozilla.widget.")
+        branch.setBoolPref("disable-native-theme", True)
         
     def do_setup(self):
         WebView.do_setup(self)
@@ -51,8 +55,8 @@ class WebView(GeckoWebView):
                                            interfaces.nsIDOMEventListener)
         self.window_root.addEventListener('command', listener, False)
 
-        self.progress.setup(self)
-        self.history.setup(self.web_navigation)
+        #self.progress.setup(self)
+        #self.history.setup(self.web_navigation)
 
         self.typeahead.init(self.doc_shell)
 

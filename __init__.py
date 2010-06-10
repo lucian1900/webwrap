@@ -1,14 +1,25 @@
 #!/usr/bin/env python
 
-if __name__ == '__main__':
-    from geckowebview import WebView
+import logging
 
+try:
+    from geckobackend import *
+except ImportError:
+    logging.warning('hulahop could not be loaded, trying pywebkitgtk.')
+    
+    try:
+        from webkitbackend import *
+    except ImportError:
+        logging.error('pywebkitgtk could not be loaded. No suitable web engine \
+                      found')
+
+if __name__ == '__main__':
     import gtk
     
     win = gtk.Window(gtk.WINDOW_TOPLEVEL)
     win.set_size_request(800,600)
     win.connect('destroy', gtk.main_quit)
-    wv = WebView()
+    wv = webview.WebView()
     wv.load_uri('http://google.com')
     wv.show()
     
